@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from lib.simple_pid import PID
 from scipy.spatial.transform import Rotation as R
+from exercises.ex0_rotations import euler2rotmat
 
 class quadrotor_controller():
     def __init__(self, exp_num):
@@ -14,7 +15,7 @@ class quadrotor_controller():
         gains = {
                     "P_pos_z": 8.0,     "I_pos_z": 0.0,     "D_pos_z": 0.8,
                     "P_pos_xy": 0.5,    "I_pos_xy": 0.0,    "D_pos_xy": 0.0,
-                    "P_vel_z": 2.0,     "I_vel_z": 0.0,     "D_vel_z": 1.0,
+                    "P_vel_z": 3.5,     "I_vel_z": 0.0,     "D_vel_z": 0.7,
                     "P_vel_xy": 0.2,    "I_vel_xy": 0.0,    "D_vel_xy": 0.0,
                     "P_att_rp": 10.0,   "I_att_rp": 0.0,    "D_att_rp": 0.2,
                     "P_att_y": 4.0,     "I_att_y": 0.0,     "D_att_y": 0.3,
@@ -104,15 +105,59 @@ class quadrotor_controller():
 
 
     def setpoint_to_pwm(self, dt, setpoint, sensor_data):
+        #if self.tuning_level != "off":
+        self.tuning_level = 'vel_z'
         if self.tuning_level != "off":
             if self.init_pos is None:
                 self.init_pos = [sensor_data['x_global'], sensor_data['y_global'], sensor_data['z_global'], 0]
             setpoint = self.init_pos + np.array([0,0,0.75,0]) #Hover above initial position
+            # hover to 75cm above start so this is the new objective
 
         ### START EXERCISE 1 implementation part ###
+        # Here you need to implement the position and velocity control loops of the drone
+        # You should use the PID controllers that you initialized in the constructor
+        # The position control loop should calculate the velocity setpoint based on the position error
+        #ici on dit au PID les positions à atteindre
+        #print(sensor_data.keys())
 
-        # return self.acceleration_and_yaw_to_pwm(dt, [acc_x_setpoint, acc_y_setpoint, acc_z_setpoint], yaw_setpoint, sensor_data)
-        return self.acceleration_and_yaw_to_pwm(dt, [0, 0, 0], 0, sensor_data) #replace this with the line above
+        self.pid_pos_x.set_setpoint(setpoint[0])
+        self.pid_pos_y.set_setpoint(setpoint[1])
+        self.pid_pos_z.set_setpoint(setpoint[2])
+        # The velocity control loop should calculate the acceleration setpoint based on the velocity error
+        vel_x_setpoint = self.pid_pos_x.call(sensor_data["x_global"],dt=dt)
+        vel_y_setpoint = self.pid_pos_y.call(sensor_data["y_global"],dt=dt)
+        vel_z_setpoint = self.pid_pos_z.call(sensor_data["z_global"],dt=dt)
+
+        # Tuning for position control
+        if self.tuning_level == "pos_z":
+            vel_z_setpoint = self.tuning(-self.limits["L_vel_z"], self.limits["L_vel_z"], 2, dt, vel_z_setpoint, sensor_data["v_z"], "velocity z [m/s]")
+        if self.tuning_level == "pos_xy":
+            vel_x_setpoint = self.tuning(-self.limits["L_vel_xy"], self.limits["L_vel_xy"], 2, dt, vel_x_setpoint, sensor_data["v_x"], "velocity x [m/s]")
+
+        # Then you should use the acceleration setpoint to calculate the motor commands using the attitude controller and the body rate controller
+        self.pid_vel_x.set_setpoint(vel_x_setpoint)
+        self.pid_vel_y.set_setpoint(vel_y_setpoint)
+        self.pid_vel_z.set_setpoint(vel_z_setpoint)
+
+        acc_x_setpoint = self.pid_vel_x.call(sensor_data["v_x"],dt=dt)
+        acc_y_setpoint = self.pid_vel_y.call(sensor_data["v_y"],dt=dt)
+        acc_z_setpoint = self.pid_vel_z.call(sensor_data["v_z"],dt=dt)
+
+        # Tuning for velocity control
+        
+        if self.tuning_level == "vel_z":
+            acc_z_setpoint = self.tuning(-0.75, 0.75, 1, dt, acc_z_setpoint, sensor_data["v_z"], "velocity z [m/s]")
+        if self.tuning_level == "vel_xy":
+            acc_x_setpoint = self.tuning(-self.limits["L_acc_rp"], self.limits["L_acc_rp"], 1, dt, acc_x_setpoint, sensor_data["v_x"], "velocity x [m/s]")
+
+        # Convert acceleration from global to body frame using rotation matrix
+        euler_angles = [sensor_data["roll"], sensor_data["pitch"], sensor_data["yaw"]]
+        R_mat = euler2rotmat(euler_angles)
+        acc_global = np.array([acc_x_setpoint, acc_y_setpoint, acc_z_setpoint])
+        acc_body = R_mat.T @ acc_global
+
+        # return self.acceleration_and_yaw_to_pwm(dt, [acc_x_setpoint, acc_y_setpoint, acc_z_setpoint], setpoint[3], sensor_data)
+        return self.acceleration_and_yaw_to_pwm(dt, acc_body.tolist(), setpoint[3], sensor_data)
     
         ### END EXERCISE 1 implementation part ###
     
