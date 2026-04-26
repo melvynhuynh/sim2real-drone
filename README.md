@@ -1,10 +1,10 @@
 # sim2real-drone
 
-> Autonomous drone racing through gates , from simulation to real hardware.
+> Autonomous drone racing through gates, from simulation to real hardware.
 
 ![Crazyflie 2.1](https://www.bitcraze.io/images/crazyflie2-1/crazyflie_2.1_585px.jpg)
 
-*Bitcraze Crazyflie 2.1 , the platform used in this project.*
+*Bitcraze Crazyflie 2.1, the platform used in this project.*
 
 ---
 
@@ -12,7 +12,7 @@
 
 This project develops a fully autonomous navigation stack for a **Crazyflie 2.1** nano-quadrotor, capable of detecting and flying through a circuit of gates as fast as possible.
 
-The system is built and validated in the **Webots simulator** and then transferred onto real hardware , a classic sim-to-real challenge in aerial robotics.
+The system is built and validated in the **Webots simulator** and then transferred onto real hardware, a classic sim-to-real challenge in aerial robotics.
 
 The drone must:
 1. **Take off** autonomously from a fixed pad
