@@ -1,4 +1,4 @@
-# sim2real-drone
+# Sim2real-drone
 
 > Autonomous drone racing through gates, from simulation to real hardware.
 
