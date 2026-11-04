@@ -2,8 +2,6 @@
 
 > Autonomous drone racing through gates, from simulation to real hardware.
 
----
-
 ## Demos
 
 ### Simulation (Webots)
@@ -13,8 +11,6 @@ https://github.com/user-attachments/assets/ccf32584-7456-4e23-9bdb-82d128ffee7f
 ### Real Hardware (Crazyflie 2.1)
 
 https://github.com/user-attachments/assets/ba1c3e28-7c76-4f28-91cf-aa1ea07819b3
-
----
 
 ## Overview
 
@@ -26,8 +22,6 @@ The drone must:
 1. **Take off** autonomously from a fixed pad
 2. **Detect 5 unknown gates** during a first exploration lap using computer vision
 3. **Race through the gates** at maximum speed for the subsequent laps
-
----
 
 ## Project Structure
 
@@ -46,8 +40,6 @@ micro-502/
 
 - **Simulation** runs `controllers/main/assignment/my_assignment.py` inside Webots.
 - **Hardware** runs `hardware/Lap1.py` then `hardware/Lap23.py` on the real Crazyflie 2.1 through the Crazyradio link.
-
----
 
 ## Sim vs Real: Why the Control Strategy Changes
 
@@ -79,8 +71,6 @@ Once the exploration lap has produced a 3D map of all five gates, perception is 
 
 The guiding principle of the sim2real adaptation: **replace any step that relied on sim-only assumptions (clean color, calibrated depth, perfect pose) with a geometrically grounded alternative (LED brightness, two-view triangulation, map-then-race).**
 
----
-
 ## Architecture
 
 ```
@@ -101,8 +91,6 @@ Camera + Sensors
   PWM output to motors
 ```
 
----
-
 ## Stack
 
 | Component | Technology |
@@ -114,8 +102,6 @@ Camera + Sensors
 | Hardware link | `cflib` (Crazyradio PA) + AI-deck video stream |
 | GUI (hardware debug) | PyQt6 |
 | Platform | Bitcraze Crazyflie 2.1 |
-
----
 
 ## Credits
 
