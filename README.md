@@ -32,8 +32,8 @@ micro-502/
 │       └── assignment/
 │           └── my_assignment.py       # Simulation controller (Webots)
 ├── hardware/
-│   ├── Lap1.py                        # Real drone — exploration lap (gate mapping)
-│   └── Lap23.py                       # Real drone — fast racing laps
+│   ├── Lap1.py                        # Real drone: exploration lap (gate mapping)
+│   └── Lap23.py                       # Real drone: fast racing laps
 ├── worlds/                            # Webots simulation environments
 └── docs/                              # Course documentation
 ```
@@ -47,26 +47,26 @@ The simulation and the real hardware share the same high-level goal (map gates, 
 
 ### Simulation (`my_assignment.py`)
 - **Perception**: HSV color segmentation on the simulated RGB camera. Gates are a known color, so a direct color mask works.
-- **Localization of gates**: single-frame bounding-box back-projection using camera intrinsics — the gate is big enough and the simulated image clean enough that one detection is sufficient to estimate 3D position.
+- **Localization of gates**: single-frame bounding-box back-projection using camera intrinsics. The gate is big enough and the simulated image clean enough that one detection is sufficient to estimate 3D position.
 - **State machine**: `TAKEOFF → FIRST_GATE_SCAN → SEARCH → ALIGN → TRAVERSE → FAST`, with confidence-weighted gate memory.
 - **Command filtering**: per-axis rate limiter + exponential smoothing.
 
-### Hardware — Exploration Lap (`Lap1.py`)
+### Hardware: Exploration Lap (`Lap1.py`)
 On the real drone we lose the color trick (indoor lighting varies, gate LEDs saturate) and single-frame depth is unreliable. The pipeline is rebuilt around two ideas:
 
 1. **Brightness-based detection**: the real gates carry a green LED ring, so detection switches to a monochrome brightness threshold on the AI-deck grayscale stream (`detect_gate_yann`, `BRIGHT_THRESH = 110`). A quad-contour extractor then finds the gate corners and tracks their centroid between frames (`tracked_max_jump` guards against identity swaps).
 
 2. **Two-view triangulation for 3D gate position**: a single bearing from one camera pose does not give depth. The drone instead performs a short controlled lateral strafe:
-   - `obs1` — record bearing to the gate centroid and the drone pose.
+   - `obs1`: record bearing to the gate centroid and the drone pose.
    - Move `baseline_right = 0.1 m` sideways while keeping yaw.
-   - `obs2` — record a second bearing from the new pose.
+   - `obs2`: record a second bearing from the new pose.
    - Triangulate the 3D intersection of the two bearing rays to recover the gate position `H`.
 
    A sanity check (`sanity_check_gate`) rejects any triangulation whose result lies more than `GATE_SANITY_RADIUS_M = 0.5 m` from a hardcoded prior average, which filters out spurious detections caused by reflections or background LEDs.
 
 3. **State machine adapted for triangulation**: an extra phase `"triangulation"` is inserted between detection and traversal, with `reset_triangulation` restarting the baseline sweep whenever the second observation times out or fails sanity checks.
 
-### Hardware — Racing Laps (`Lap23.py`)
+### Hardware: Racing Laps (`Lap23.py`)
 Once the exploration lap has produced a 3D map of all five gates, perception is no longer needed: `Lap23.py` runs an open-loop trajectory through the mapped waypoints with yaw pre-alignment, trading robustness for speed.
 
 The guiding principle of the sim2real adaptation: **replace any step that relied on sim-only assumptions (clean color, calibrated depth, perfect pose) with a geometrically grounded alternative (LED brightness, two-view triangulation, map-then-race).**
